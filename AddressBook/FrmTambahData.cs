@@ -18,6 +18,8 @@ namespace AddressBook
 
         bool _addMode = false; // true : add item, false : edit item
 
+        Person _addrBook = null;
+
 
         public bool Run(FrmTambahData form)
         {
@@ -31,10 +33,23 @@ namespace AddressBook
             _addMode = addMode;
         }
 
-        public FrmTambahData()
+        public FrmTambahData(bool addMode, Person addrBook = null)
         {
+            InitializeComponent();
+            _addMode = addMode;
+            if (addrBook != null)
+            {
+                _addrBook = addrBook;
+                this.txtNama.Text = addrBook.Nama;
+                this.txtAlamat.Text = addrBook.Alamat;
+                this.txtKota.Text = addrBook.Kota;
+                this.txtNoHp.Text = addrBook.NoHp;
+                this.dtpTglLahir.Value = addrBook.TanggalLahir.Date;
+                this.txtEmail.Text = addrBook.Email;
+            }
+
         }
-        
+
         private void btnSimpan_Click(object sender, EventArgs e)
         {
             // validas
@@ -79,7 +94,27 @@ namespace AddressBook
                     }
                     else // edit data
                     {
-
+                        string[] fileContent = File.ReadAllLines("addressbook.csv");
+                        using (FileStream fs = new FileStream("temporary.csv", FileMode.Create, FileAccess.Write))
+                        {
+                            using (StreamWriter writer = new StreamWriter(fs))
+                            {
+                                foreach (string line in fileContent)
+                                {
+                                    string[] arrline = line.Split(';');
+                                    if (arrline[0] == _addrBook.Nama && arrline[1] == _addrBook.Alamat && arrline[2] == _addrBook.Kota && arrline[3] == _addrBook.NoHp && Convert.ToDateTime(arrline[4]).Date == _addrBook.TanggalLahir.Date && arrline[5] == _addrBook.Email)
+                                    {
+                                        writer.WriteLine($"{txtNama.Text.Trim()};{txtAlamat.Text.Trim()};{txtKota.Text.Trim()};{txtNoHp.Text.Trim()};{dtpTglLahir.Value.ToShortDateString()};{txtEmail.Text.Trim()}");
+                                    }
+                                    else
+                                    {
+                                        writer.WriteLine(line);
+                                    }
+                                }
+                            }
+                        }
+                        File.Delete("addressbook.csv");
+                        File.Move("temporary.csv", "addressbook.csv");
                     }
                     _result = true;
                     this.Close();
