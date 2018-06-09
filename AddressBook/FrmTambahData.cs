@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace AddressBook
 {
@@ -20,6 +21,10 @@ namespace AddressBook
 
         Person _addrBook = null;
 
+        AddressBookController addr = new AddressBookController();
+
+        Person psn_New = new Person();
+
 
         public bool Run(FrmTambahData form)
         {
@@ -27,11 +32,6 @@ namespace AddressBook
             return _result;
         }
 
-        public FrmTambahData(bool addMode)
-        {
-            InitializeComponent();
-            _addMode = addMode;
-        }
 
         public FrmTambahData(bool addMode, Person addrBook = null)
         {
@@ -78,59 +78,63 @@ namespace AddressBook
                 MessageBox.Show("Sorry, email wajib isi...", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 this.txtEmail.Focus();
             }
+            else if (txtEmail.Text.Trim() == "")
+            {
+                MessageBox.Show("Sorry, email tidak valid...", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtEmail.Focus();
+            }
             else
             {
-                try
-                {
-                    if (_addMode) // add new item
-                    {
-                        using (var fs = new FileStream("addressbook.csv", FileMode.Append, FileAccess.Write))
-                        {
-                            using (StreamWriter writer = new StreamWriter(fs))
-                            {
-                                writer.WriteLine($"{txtNama.Text.Trim()};{txtAlamat.Text.Trim()};{txtKota.Text.Trim()};{txtNoHp.Text.Trim()};{dtpTglLahir.Value.ToShortDateString()};{txtEmail.Text.Trim()};");
-                            }
-                        }
-                    }
-                    else // edit data
-                    {
-                        string[] fileContent = File.ReadAllLines("addressbook.csv");
-                        using (FileStream fs = new FileStream("temporary.csv", FileMode.Create, FileAccess.Write))
-                        {
-                            using (StreamWriter writer = new StreamWriter(fs))
-                            {
-                                foreach (string line in fileContent)
-                                {
-                                    string[] arrline = line.Split(';');
-                                    if (arrline[0] == _addrBook.Nama && arrline[1] == _addrBook.Alamat && arrline[2] == _addrBook.Kota && arrline[3] == _addrBook.NoHp && Convert.ToDateTime(arrline[4]).Date == _addrBook.TanggalLahir.Date && arrline[5] == _addrBook.Email)
-                                    {
-                                        writer.WriteLine($"{txtNama.Text.Trim()};{txtAlamat.Text.Trim()};{txtKota.Text.Trim()};{txtNoHp.Text.Trim()};{dtpTglLahir.Value.ToShortDateString()};{txtEmail.Text.Trim()}");
-                                    }
-                                    else
-                                    {
-                                        writer.WriteLine(line);
-                                    }
-                                }
-                            }
-                        }
-                        File.Delete("addressbook.csv");
-                        File.Move("temporary.csv", "addressbook.csv");
-                    }
-                    _result = true;
-                    this.Close();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                // simpan data ke file
-
+                addr.saveData(_addMode, initial_people(psn_New), _addrBook);
+                this.Close();
+                _result = true;
             }
         }
+
+       
 
         private void btnBatal_Click(object sender, EventArgs e)
         {
             this.Close();
+        }
+
+        private void txtNama_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) SendKeys.Send("{tab}");
+        }
+
+        private void txtEmail_Leave(object sender, EventArgs e)
+        {
+            if (this.txtEmail.Text.Trim() != "")
+            {
+                if (!addr.EmailIsValid(this.txtEmail.Text))
+                {
+                    MessageBox.Show("Sorry, Data email tidak valid ...", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    this.txtEmail.Clear();
+                    this.txtEmail.Focus();
+                }
+            }
+        }
+
+
+        private Person initial_people(Person p)
+        {
+            p.Nama = this.txtNama.Text.Trim();
+            p.Alamat = this.txtAlamat.Text.Trim();
+            p.Kota = this.txtKota.Text.Trim();
+            p.NoHp = this.txtNoHp.Text.Trim();
+            p.TanggalLahir = this.dtpTglLahir.Value;
+            p.Email = this.txtEmail.Text.Trim();
+
+            return p;
+        }
+
+        private void txtNoHp_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if(!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+            }
         }
     }
 }
